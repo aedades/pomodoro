@@ -1,0 +1,21 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// Use VITE_BASE_PATH env var, default to '/' for local dev
+// GitHub Actions sets VITE_BASE_PATH='/pomodoro/' for production
+const basePath = process.env.VITE_BASE_PATH || '/'
+
+export default defineConfig({
+  base: basePath,
+  plugins: [react()],
+  server: {
+    host: '0.0.0.0', // Listen on all interfaces (LAN accessible)
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
+})
