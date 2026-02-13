@@ -85,15 +85,25 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     const prevUser = prevUserRef.current
     prevUserRef.current = user?.id ?? null
     
+    console.log('[SignOut] User changed:', { prevUser, currentUser: user?.id ?? null })
+    
     // Detect sign-out: previous user existed, current user is null
     if (prevUser && !user) {
       const data = firestoreDataRef.current
+      console.log('[SignOut] Detected sign-out. Firestore data:', {
+        tasks: data.tasks.length,
+        projects: data.projects.length,
+        pomodoros: data.pomodoros.length,
+      })
+      
       if (data.tasks.length > 0 || data.projects.length > 0) {
         // Update guest state directly (also persists to localStorage via useLocalStorage)
         guestData.setAllTasks(data.tasks)
         guestData.setAllProjects(data.projects)
         guestData.setAllPomodoros(data.pomodoros)
-        console.log('Firestore data synced to guest state on sign-out')
+        console.log('[SignOut] Firestore data synced to guest state')
+      } else {
+        console.log('[SignOut] No data to sync (empty Firestore)')
       }
       // Reset migration flag so merge can run on next sign-in
       setHasMigrated(false)
@@ -103,7 +113,20 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   // Merge local data into Firestore on sign-in
   // Waits for Firestore to load so we can compare and only add new items
   useEffect(() => {
-    if (user && !hasMigrated && isFirebaseConfigured && !firestoreData.isLoading && guestData.tasks.length > 0) {
+    const hasLocalData = guestData.tasks.length > 0 || guestData.projects.length > 0
+    
+    console.log('[Merge] Checking conditions:', {
+      user: !!user,
+      hasMigrated,
+      isFirebaseConfigured,
+      isLoading: firestoreData.isLoading,
+      localTasks: guestData.tasks.length,
+      localProjects: guestData.projects.length,
+      hasLocalData,
+    })
+    
+    if (user && !hasMigrated && isFirebaseConfigured && !firestoreData.isLoading && hasLocalData) {
+      console.log('[Merge] Running merge...')
       // User signed in and has local data - merge it with cloud data
       mergeLocalToFirestore(
         {
@@ -118,11 +141,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         },
         user.id
       ).then((result) => {
+        console.log('[Merge] Complete:', result.added)
         // Mark as migrated so we don't do it again this session
         setHasMigrated(true)
-        // Clear local data after successful merge
+        // Clear local data after successful merge (both localStorage and React state)
         clearLocalData()
-        console.log('Merge result:', result.added)
+        guestData.setAllTasks([])
+        guestData.setAllProjects([])
+        guestData.setAllPomodoros([])
       })
     }
   // Only trigger when loading state changes or user changes
