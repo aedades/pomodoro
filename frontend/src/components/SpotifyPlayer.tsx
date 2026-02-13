@@ -11,6 +11,15 @@
 import { useState } from 'react'
 import { useSpotify, extractPlaylistId, getSpotifyEmbedUrl } from '../hooks/useSpotify'
 
+// Curated focus playlists
+const PRESET_PLAYLISTS = [
+  { id: '37i9dQZF1DWWQRwui0ExPn', name: 'Lo-Fi Beats', emoji: '🎧' },
+  { id: '37i9dQZF1DX0SM0LYsmbMT', name: 'Jazz Vibes', emoji: '🎷' },
+  { id: '37i9dQZF1DX6ziVCJnEm59', name: 'Coffee Shop', emoji: '☕' },
+  { id: '37i9dQZF1DWWEJlAGA9gs0', name: 'Classical Focus', emoji: '🎻' },
+  { id: '37i9dQZF1DX3Ogo9pFvBkY', name: 'Ambient Chill', emoji: '🌿' },
+] as const
+
 interface SpotifyPlayerProps {
   /** Whether to show full integration or just embed */
   mode?: 'embed' | 'full'
@@ -20,12 +29,13 @@ interface SpotifyPlayerProps {
 
 export default function SpotifyPlayer({ 
   mode = 'embed',
-  defaultPlaylist = '37i9dQZF1DX5Ejj0EkURtP' // Lo-Fi Beats
+  defaultPlaylist = PRESET_PLAYLISTS[0].id
 }: SpotifyPlayerProps) {
   const spotify = useSpotify()
   const [playlistInput, setPlaylistInput] = useState('')
   const [playlistId, setPlaylistId] = useState(defaultPlaylist)
   const [showInput, setShowInput] = useState(false)
+  const [showPresets, setShowPresets] = useState(false)
 
   const handleSetPlaylist = () => {
     const id = extractPlaylistId(playlistInput)
@@ -36,6 +46,10 @@ export default function SpotifyPlayer({
     }
   }
 
+  // Get current playlist name
+  const currentPreset = PRESET_PLAYLISTS.find(p => p.id === playlistId)
+  const currentName = currentPreset ? `${currentPreset.emoji} ${currentPreset.name}` : '🎵 Custom Playlist'
+
   // Simple embed mode
   if (mode === 'embed') {
     return (
@@ -45,13 +59,50 @@ export default function SpotifyPlayer({
             🎵 Focus Music
           </h3>
           <button
-            onClick={() => setShowInput(!showInput)}
+            onClick={() => {
+              setShowPresets(!showPresets)
+              setShowInput(false)
+            }}
             className="text-sm text-white/60 hover:text-white dark:text-gray-400 dark:hover:text-gray-200"
           >
-            {showInput ? 'Cancel' : 'Change playlist'}
+            {currentName} ▾
           </button>
         </div>
 
+        {/* Preset selector */}
+        {showPresets && (
+          <div className="mb-3 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              {PRESET_PLAYLISTS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => {
+                    setPlaylistId(preset.id)
+                    setShowPresets(false)
+                  }}
+                  className={`px-3 py-2 text-sm rounded-lg text-left transition-colors ${
+                    playlistId === preset.id
+                      ? 'bg-green-500 text-white'
+                      : 'bg-white/10 text-white/80 hover:bg-white/20'
+                  }`}
+                >
+                  {preset.emoji} {preset.name}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                setShowPresets(false)
+                setShowInput(true)
+              }}
+              className="w-full px-3 py-2 text-sm rounded-lg bg-white/10 text-white/60 hover:bg-white/20 hover:text-white/80 transition-colors"
+            >
+              🔗 Paste custom URL...
+            </button>
+          </div>
+        )}
+
+        {/* Custom URL input */}
         {showInput && (
           <div className="flex gap-2 mb-3">
             <input
@@ -66,6 +117,12 @@ export default function SpotifyPlayer({
               className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
             >
               Set
+            </button>
+            <button
+              onClick={() => setShowInput(false)}
+              className="px-2 py-2 text-white/60 hover:text-white"
+            >
+              ✕
             </button>
           </div>
         )}
