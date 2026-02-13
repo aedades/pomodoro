@@ -168,3 +168,98 @@ describe('formatDuration', () => {
     expect(formatDuration(185)).toBe('3h 5m')
   })
 })
+
+describe('useStats - pomodoros without taskId', () => {
+  const today = new Date().toISOString().split('T')[0]
+  
+  it('counts pomodoros without taskId', () => {
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 25, startedAt: today, completedAt: `${today}T10:00:00`, interrupted: false },
+      { id: '2', durationMinutes: 25, startedAt: today, completedAt: `${today}T11:00:00`, interrupted: false },
+      { id: '3', taskId: undefined, durationMinutes: 25, startedAt: today, completedAt: `${today}T12:00:00`, interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, [], []))
+    
+    expect(result.current.totalPomodoros).toBe(3)
+    expect(result.current.totalMinutes).toBe(75) // 3 * 25
+  })
+  
+  it('includes taskless pomodoros in today stats', () => {
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 30, startedAt: today, completedAt: `${today}T10:00:00`, interrupted: false },
+      { id: '2', durationMinutes: 45, startedAt: today, completedAt: `${today}T11:00:00`, interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, [], []))
+    
+    expect(result.current.today.completed).toBe(2)
+    expect(result.current.today.totalMinutes).toBe(75)
+  })
+  
+  it('groups taskless pomodoros as "No Project" in project breakdown', () => {
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 25, startedAt: today, completedAt: today, interrupted: false },
+      { id: '2', durationMinutes: 25, startedAt: today, completedAt: today, interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, [], []))
+    
+    // Should have one entry for "No Project"
+    const noProjectEntry = result.current.byProject.find(p => p.projectName === 'No Project')
+    expect(noProjectEntry).toBeDefined()
+    expect(noProjectEntry?.pomodoros).toBe(2)
+  })
+})
+
+describe('useStats - reactivity', () => {
+  const today = new Date().toISOString().split('T')[0]
+  
+  it('updates when pomodoros array changes', () => {
+    const initialPomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 25, startedAt: today, completedAt: `${today}T10:00:00`, interrupted: false },
+    ]
+    
+    const { result, rerender } = renderHook(
+      ({ pomodoros }) => useStats(pomodoros, [], []),
+      { initialProps: { pomodoros: initialPomodoros } }
+    )
+    
+    expect(result.current.totalPomodoros).toBe(1)
+    
+    // Add another pomodoro
+    const updatedPomodoros: GuestPomodoro[] = [
+      ...initialPomodoros,
+      { id: '2', durationMinutes: 25, startedAt: today, completedAt: `${today}T11:00:00`, interrupted: false },
+    ]
+    
+    rerender({ pomodoros: updatedPomodoros })
+    
+    expect(result.current.totalPomodoros).toBe(2)
+  })
+  
+  it('updates today stats when new pomodoro added', () => {
+    const initialPomodoros: GuestPomodoro[] = []
+    
+    const { result, rerender } = renderHook(
+      ({ pomodoros }) => useStats(pomodoros, [], []),
+      { initialProps: { pomodoros: initialPomodoros } }
+    )
+    
+    expect(result.current.today.completed).toBe(0)
+    
+    // Add a pomodoro for today
+    const newPomodoro: GuestPomodoro = {
+      id: '1',
+      durationMinutes: 25,
+      startedAt: today,
+      completedAt: `${today}T10:00:00`,
+      interrupted: false,
+    }
+    
+    rerender({ pomodoros: [newPomodoro] })
+    
+    expect(result.current.today.completed).toBe(1)
+    expect(result.current.today.totalMinutes).toBe(25)
+  })
+})

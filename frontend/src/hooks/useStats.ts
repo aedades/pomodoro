@@ -268,9 +268,13 @@ export function useStats(
     // By project
     const projectMap = new Map<string, number>()
     for (const p of pomodoros) {
-      if (p.interrupted || !p.taskId) continue
-      const task = tasks.find(t => t.id === p.taskId)
-      const projectId = task?.projectId || 'none'
+      if (p.interrupted) continue
+      // Handle pomodoros without taskId - group as 'none'
+      let projectId = 'none'
+      if (p.taskId) {
+        const task = tasks.find(t => t.id === p.taskId)
+        projectId = task?.projectId || 'none'
+      }
       projectMap.set(projectId, (projectMap.get(projectId) || 0) + 1)
     }
     
