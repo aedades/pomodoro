@@ -263,14 +263,17 @@ function AppContent() {
           <p className="text-white/50">
             {isCloudSync ? '☁️ Synced to cloud' : '📦 Data saved locally in your browser'}
           </p>
-          <a
-            href="https://buymeacoffee.com/aedades"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-full text-sm font-medium transition-colors"
-          >
-            ☕ Buy me a coffee
-          </a>
+          <p className="text-white/50">
+            Made with ❤️ ~{' '}
+            <a
+              href="https://buymeacoffee.com/aedades"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-white dark:hover:text-gray-300 transition-colors"
+            >
+              Support this project ☕
+            </a>
+          </p>
           <p className="text-white/50 dark:text-gray-500 mt-3">
             Working with a remote team? Try{' '}
             <a
