@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { useSettings } from './hooks/useSettings'
-import { useTimer } from './hooks/useTimer'
+import { useTimer, TimerState } from './hooks/useTimer'
+import { useTimerSync } from './hooks/useTimerSync'
 import { useNotifications } from './hooks/useNotifications'
 import { useTimerNotifications } from './hooks/useTimerNotifications'
 import { useStats } from './hooks/useStats'
@@ -21,8 +22,11 @@ function AppContent() {
   const { activeTask, todayPomodoros, recordPomodoro, pomodoros, guestTasks, guestProjects, isCloudSync } = useTaskContext()
   const { permission, requestPermission } = useNotifications()
   const { scheduleNotification, cancelNotification } = useTimerNotifications()
+  const { remoteState, syncTimerState, isSyncEnabled } = useTimerSync()
   const [showIOSInstructions, setShowIOSInstructions] = useState(false)
   const prevRunningRef = useRef(false)
+  const appliedRemoteRef = useRef(false)
+  const lastSyncedStateRef = useRef<string>('')
   const [view, setView] = useState<View>('timer')
   const stats = useStats(pomodoros, guestTasks, guestProjects)
   
@@ -45,7 +49,51 @@ function AppContent() {
     [recordPomodoro]
   )
 
-  const timer = useTimer({ settings, onComplete: handleTimerComplete })
+  // Sync timer state changes to Firestore
+  const handleTimerStateChange = useCallback((state: TimerState) => {
+    if (!isSyncEnabled) return
+    
+    // Only sync if state actually changed (debounce)
+    const stateKey = JSON.stringify({
+      isRunning: state.isRunning,
+      mode: state.mode,
+      sessionCount: state.sessionCount,
+    })
+    if (stateKey === lastSyncedStateRef.current) return
+    lastSyncedStateRef.current = stateKey
+    
+    syncTimerState(state)
+  }, [isSyncEnabled, syncTimerState])
+
+  const timer = useTimer({ 
+    settings, 
+    onComplete: handleTimerComplete,
+    onStateChange: handleTimerStateChange,
+  })
+
+  // Apply remote state when it changes (from another device)
+  useEffect(() => {
+    if (!remoteState || !isSyncEnabled) return
+    
+    // Only apply once on initial load, or when remote state differs significantly
+    const remoteKey = JSON.stringify({
+      isRunning: remoteState.isRunning,
+      mode: remoteState.mode,
+      sessionCount: remoteState.sessionCount,
+    })
+    
+    // Skip if we just synced this state ourselves
+    if (remoteKey === lastSyncedStateRef.current) return
+    
+    // Apply remote state if it differs
+    if (!appliedRemoteRef.current || 
+        remoteState.isRunning !== timer.isRunning ||
+        remoteState.mode !== timer.mode) {
+      timer.applyState(remoteState)
+      appliedRemoteRef.current = true
+      lastSyncedStateRef.current = remoteKey
+    }
+  }, [remoteState, isSyncEnabled, timer])
 
   // Schedule/cancel push notifications when timer starts/stops
   useEffect(() => {

@@ -3,15 +3,25 @@ import type { Settings } from './useSettings'
 
 type TimerMode = 'work' | 'shortBreak' | 'longBreak'
 
+interface TimerState {
+  isRunning: boolean
+  mode: TimerMode
+  endTime: number | null
+  startTime: number | null
+  sessionCount: number
+  pausedTimeLeft: number | null
+}
+
 interface UseTimerOptions {
   settings: Settings
   onComplete: (mode: TimerMode, interrupted: boolean) => void
+  onStateChange?: (state: TimerState) => void  // Called when timer state changes
 }
 
 // Base64 encoded simple beep sound
 const BEEP_SOUND = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2LkpONgXVsaW59ipujo5yCbWBdaHqMnqqtoJF+bWBgaoKUpKutpJF9bV5fa4OUp6yspZKAb2JjaICQoKWlnpF/cGRmaYGQn6SkmZB+b2ZpbIKTn6OjmI58bmlscYaVoKKhlo17cG1vdImYoaGgk4t3b29ze42boaCfjYl1cHF3fJCdoJ6diod0cXR6gJKen52chYNzcnd8g5Senp2ZgYBycnl/hpWcnJqXf3xxc3qBiZOam5mVfntxdHuDi5OZmZaUfHpwdHuDjJOYl5aSenhvc3qDjZKXlpWRd3Zuc3qFjpOWlZSOdXNscnmFj5KVlJKNc3FrcXiFkJKUk5GMcm9rcXiGkJKUk5CLcW5rcXiGkJKUk5CKcG1rcXmHkZOUk5CKb2xrcXmHkZOUk5CJbmtrcXmHkpSUk5CJbWprcXqIkpSUk5CIbGlqcXqIk5SUk5CHa2hqcXuJk5WVk5GHamhpcXuJlJaVk5GGaGdpcXyKlJaVk5GFZ2ZpcXyKlZeVk5GEZmVpcXyLlZeVk5GDZWRpcX2LlpiWk5GCZGNpcX2Ml5mWk5GAZWJ='
 
-export function useTimer({ settings, onComplete }: UseTimerOptions) {
+export function useTimer({ settings, onComplete, onStateChange }: UseTimerOptions) {
   const [mode, setMode] = useState<TimerMode>('work')
   const [isRunning, setIsRunning] = useState(false)
   const [sessionCount, setSessionCount] = useState(0)
@@ -288,6 +298,41 @@ export function useTimer({ settings, onComplete }: UseTimerOptions) {
     }
   }, [getDuration, mode, isRunning])
 
+  // Notify parent of state changes for sync
+  useEffect(() => {
+    if (onStateChange) {
+      onStateChange({
+        isRunning,
+        mode,
+        endTime,
+        startTime,
+        sessionCount,
+        pausedTimeLeft: !isRunning ? timeLeft : null,
+      })
+    }
+  }, [isRunning, mode, endTime, startTime, sessionCount, timeLeft, onStateChange])
+
+  // Apply state from external source (e.g., Firestore sync)
+  const applyState = useCallback((state: TimerState) => {
+    setMode(state.mode)
+    setSessionCount(state.sessionCount)
+    setEndTime(state.endTime)
+    setStartTime(state.startTime)
+    setIsRunning(state.isRunning)
+    
+    if (state.pausedTimeLeft !== null) {
+      setTimeLeft(state.pausedTimeLeft)
+    } else if (state.endTime) {
+      const remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000))
+      setTimeLeft(remaining)
+    } else if (state.startTime) {
+      const elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000)
+      setElapsed(elapsedSeconds)
+    }
+    
+    completedRef.current = false
+  }, [])
+
   // Display time depends on mode
   const displayTime = isFlowMode ? elapsed : timeLeft
   const targetTime = getDuration('work')
@@ -302,10 +347,16 @@ export function useTimer({ settings, onComplete }: UseTimerOptions) {
     resetTimer,
     interrupt,
     setMode: (m: TimerMode) => resetTimer(m),
+    applyState,  // For sync from external source
     // Flow mode specific
     isFlowMode,
     elapsed,
     isOverTarget,
     targetTime,
+    // Raw state for sync
+    endTime,
+    startTime,
   }
 }
+
+export type { TimerState }
