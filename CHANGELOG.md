@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.4](https://github.com/aedades/pomopal/compare/v1.1.3...v1.1.4) (2026-02-13)
+
+
+### Bug Fixes
+
+* use correct localStorage keys for guest data sync ([#25](https://github.com/aedades/pomopal/issues/25)) ([edae0db](https://github.com/aedades/pomopal/commit/edae0db1a4d3a10202321ec716c77fae3172b239))
+
 ## [1.1.3](https://github.com/aedades/pomopal/compare/v1.1.2...v1.1.3) (2026-02-13)
 
 
