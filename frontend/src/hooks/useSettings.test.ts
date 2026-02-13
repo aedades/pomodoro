@@ -9,6 +9,7 @@ describe('useSettings', () => {
 
   const DEFAULT_SETTINGS = {
     daily_pomodoro_goal: 8,
+    daily_goal_enabled: true,
     flow_mode_enabled: false,
     auto_start_breaks: false,
     dark_mode: false,

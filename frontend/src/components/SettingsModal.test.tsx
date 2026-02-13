@@ -13,6 +13,7 @@ describe('SettingsModal', () => {
     notifications_enabled: true,
     dark_mode: false,
     daily_pomodoro_goal: 8,
+    daily_goal_enabled: true,
     flow_mode_enabled: false,
     move_completed_to_bottom: true,
     dated_tasks_first: true,
@@ -41,7 +42,8 @@ describe('SettingsModal', () => {
     );
 
     expect(screen.getByLabelText(/work/i)).toHaveValue(45);
-    expect(screen.getByRole('spinbutton', { name: /daily pomodoro goal/i })).toHaveValue(12);
+    // Daily goal input is now labeled "Target" under the toggle
+    expect(screen.getByLabelText(/target/i)).toHaveValue(12);
   });
 
   it('calls onUpdate with new value when timer duration changes', () => {
@@ -74,9 +76,9 @@ describe('SettingsModal', () => {
     const toggleButtons = allButtons.filter(btn => 
       btn.className.includes('w-12') && btn.className.includes('h-6')
     );
-    // Flow mode is after the behavior toggles (auto-start, sound, notifications, dark, completed, dated)
-    // It's the 7th toggle (index 6)
-    const flowModeToggle = toggleButtons[6];
+    // Flow mode is after the behavior toggles:
+    // 0: daily_goal, 1: auto-start, 2: sound, 3: notifications, 4: dark, 5: completed, 6: dated, 7: flow
+    const flowModeToggle = toggleButtons[7];
     fireEvent.click(flowModeToggle);
     expect(mockOnUpdate).toHaveBeenCalledWith({ flow_mode_enabled: true });
   });

@@ -155,7 +155,7 @@ function AppContent() {
             <>
               <DailyProgress
                 current={todayPomodoros}
-                goal={settings.daily_pomodoro_goal}
+                goal={settings.daily_goal_enabled ? settings.daily_pomodoro_goal : null}
               />
 
               <Timer

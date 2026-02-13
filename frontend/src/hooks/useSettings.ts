@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 
 export interface Settings {
   daily_pomodoro_goal: number
+  daily_goal_enabled: boolean // Whether to show goal progress
   auto_start_breaks: boolean
   dark_mode: boolean
   sound_enabled: boolean
@@ -17,6 +18,7 @@ export interface Settings {
 
 const DEFAULT_SETTINGS: Settings = {
   daily_pomodoro_goal: 8,
+  daily_goal_enabled: true,
   auto_start_breaks: false,
   dark_mode: false,
   sound_enabled: true,

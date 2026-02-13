@@ -99,20 +99,44 @@ export default function SettingsModal({ settings, onUpdate, onClose }: SettingsM
             <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase mb-3">
               Goals
             </h3>
-            <div className="flex items-center justify-between">
-              <label htmlFor="daily-goal" className="text-gray-700 dark:text-gray-300">
-                Daily pomodoro goal
-                <HelpTip text="Set a target number of pomodoros to complete each day. Your progress is shown at the top of the timer view." />
-              </label>
-              <input
-                id="daily-goal"
-                type="number"
-                value={settings.daily_pomodoro_goal}
-                onChange={(e) => onUpdate({ daily_pomodoro_goal: parseInt(e.target.value) || 8 })}
-                className="w-20 px-3 py-2 border rounded-lg text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                min="1"
-                max="20"
+            <div className="space-y-3">
+              <Toggle
+                label="Daily pomodoro goal"
+                checked={settings.daily_goal_enabled}
+                onChange={(v) => onUpdate({ daily_goal_enabled: v })}
+                help="Set a target number of pomodoros to complete each day. Your progress is shown at the top of the timer view."
               />
+              {settings.daily_goal_enabled && (
+                <div className="flex items-center justify-between pl-4">
+                  <label htmlFor="daily-goal" className="text-gray-600 dark:text-gray-400 text-sm">
+                    Target
+                  </label>
+                  <input
+                    id="daily-goal"
+                    type="number"
+                    value={settings.daily_pomodoro_goal}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      // Allow empty while typing, but enforce min 1 on blur
+                      if (val === '') return
+                      const num = parseInt(val)
+                      if (!isNaN(num) && num >= 1 && num <= 99) {
+                        onUpdate({ daily_pomodoro_goal: num })
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Ensure valid value on blur
+                      const num = parseInt(e.target.value)
+                      if (isNaN(num) || num < 1) {
+                        onUpdate({ daily_pomodoro_goal: 8 })
+                      }
+                    }}
+                    className="w-20 px-3 py-2 border rounded-lg text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    min="1"
+                    max="99"
+                  />
+                </div>
+              )}
             </div>
           </section>
 

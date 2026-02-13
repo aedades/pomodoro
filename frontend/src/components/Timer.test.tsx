@@ -13,6 +13,7 @@ describe('Timer', () => {
     notifications_enabled: true,
     dark_mode: false,
     daily_pomodoro_goal: 8,
+    daily_goal_enabled: true,
     flow_mode_enabled: false,
     move_completed_to_bottom: true,
     dated_tasks_first: true,
