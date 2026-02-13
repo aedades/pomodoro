@@ -2,7 +2,7 @@
 
 A friendly pomodoro timer PWA with push notifications, multi-device sync, and flow mode.
 
-**Live:** https://pomopal.web.app
+**Live:** https://pomopal-f14e0.web.app
 
 ## Features
 
@@ -102,9 +102,9 @@ npm run deploy
 
 | Environment | URL | Trigger |
 |-------------|-----|---------|
-| **Preview** | `pomopal--pr-XXX.web.app` | PR opened |
-| **Staging** | `pomopal--staging.web.app` | Push to `main` |
-| **Production** | `pomopal.web.app` | Manual deploy |
+| **Preview** | `pomopal-f14e0--pr-XXX.web.app` | PR opened |
+| **Staging** | `pomopal-f14e0.web.app` | Push to `main` |
+| **Production** | `pomopal-f14e0.web.app` | Manual deploy |
 
 ### Deploy to Production
 
