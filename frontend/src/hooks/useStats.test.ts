@@ -228,6 +228,98 @@ describe('useStats - pomodoros without taskId', () => {
   })
 })
 
+describe('useStats - excludeWeekendsFromStreak', () => {
+  // Helper to get date string for a specific day offset from a reference Monday
+  const getDate = (baseMonday: Date, dayOffset: number): string => {
+    const d = new Date(baseMonday)
+    d.setDate(d.getDate() + dayOffset)
+    return d.toISOString().split('T')[0]
+  }
+  
+  // Find next Monday from today for predictable test dates
+  const getNextMonday = (): Date => {
+    const today = new Date()
+    const day = today.getDay()
+    const daysUntilMonday = day === 0 ? 1 : (8 - day) % 7 || 7
+    const monday = new Date(today)
+    monday.setDate(monday.getDate() + daysUntilMonday)
+    monday.setHours(12, 0, 0, 0)
+    return monday
+  }
+  
+  // Use a fixed date for predictable tests (a Monday)
+  const monday = new Date('2024-01-15T12:00:00') // This is a Monday
+  
+  it('includes weekends in streak by default', () => {
+    // Mon, Tue, Wed, Thu, Fri, Sat, Sun (7 consecutive days)
+    const pomodoros: GuestPomodoro[] = Array.from({ length: 7 }, (_, i) => ({
+      id: `${i}`,
+      durationMinutes: 25,
+      startedAt: getDate(monday, i),
+      completedAt: `${getDate(monday, i)}T10:00:00`,
+      interrupted: false,
+    }))
+    
+    const { result } = renderHook(() => useStats(pomodoros, [], []))
+    
+    // All 7 days should count
+    expect(result.current.longestStreak).toBe(7)
+  })
+  
+  it('excludes weekends from streak when option enabled', () => {
+    // Mon, Tue, Wed, Thu, Fri, Sat, Sun, Mon (8 consecutive calendar days = 6 weekdays)
+    const pomodoros: GuestPomodoro[] = Array.from({ length: 8 }, (_, i) => ({
+      id: `${i}`,
+      durationMinutes: 25,
+      startedAt: getDate(monday, i),
+      completedAt: `${getDate(monday, i)}T10:00:00`,
+      interrupted: false,
+    }))
+    
+    const { result } = renderHook(() => 
+      useStats(pomodoros, [], [], { excludeWeekendsFromStreak: true })
+    )
+    
+    // 8 calendar days but only 6 weekdays (skip Sat index 5 and Sun index 6)
+    expect(result.current.longestStreak).toBe(6)
+  })
+  
+  it('maintains streak over weekend gap when weekends excluded', () => {
+    // Friday and following Monday only (no Sat/Sun activity)
+    const friday = getDate(monday, 4) // Fri
+    const nextMonday = getDate(monday, 7) // Next Mon
+    
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 25, startedAt: friday, completedAt: `${friday}T10:00:00`, interrupted: false },
+      { id: '2', durationMinutes: 25, startedAt: nextMonday, completedAt: `${nextMonday}T10:00:00`, interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => 
+      useStats(pomodoros, [], [], { excludeWeekendsFromStreak: true })
+    )
+    
+    // Friday + Monday should be a 2-day streak (weekend skipped)
+    expect(result.current.longestStreak).toBe(2)
+  })
+  
+  it('breaks streak for missing weekday when weekends excluded', () => {
+    // Monday and Wednesday only (missing Tuesday)
+    const wed = getDate(monday, 2) // Wed
+    
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 25, startedAt: getDate(monday, 0), completedAt: `${getDate(monday, 0)}T10:00:00`, interrupted: false },
+      { id: '2', durationMinutes: 25, startedAt: wed, completedAt: `${wed}T10:00:00`, interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => 
+      useStats(pomodoros, [], [], { excludeWeekendsFromStreak: true })
+    )
+    
+    // Missing Tuesday breaks the streak - longest is 1
+    expect(result.current.longestStreak).toBe(1)
+  })
+})
+
 describe('useStats - reactivity', () => {
   const today = new Date().toISOString().split('T')[0]
   

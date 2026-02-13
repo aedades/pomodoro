@@ -85,15 +85,17 @@ export function useStats(
     const todayStr = getDateString(now)
     
     // Helper to check if a date is a weekend
+    // Note: We parse as 'YYYY-MM-DDT12:00:00' to avoid timezone issues
+    // (date-only strings are parsed as UTC midnight, which can shift the day)
     const isWeekend = (dateStr: string): boolean => {
-      const d = new Date(dateStr)
+      const d = new Date(`${dateStr}T12:00:00`)
       const day = d.getDay()
       return day === 0 || day === 6 // Sunday = 0, Saturday = 6
     }
     
     // Get previous working day (skips weekends if excluding)
     const getPrevDay = (dateStr: string): string => {
-      const d = new Date(dateStr)
+      const d = new Date(`${dateStr}T12:00:00`)
       d.setDate(d.getDate() - 1)
       let result = getDateString(d)
       
@@ -183,7 +185,7 @@ export function useStats(
         tempStreak = 1
       } else {
         // Check if dates are consecutive (accounting for weekend skipping)
-        const expectedNext = new Date(prevDate)
+        const expectedNext = new Date(`${prevDate}T12:00:00`)
         expectedNext.setDate(expectedNext.getDate() + 1)
         let expectedDateStr = getDateString(expectedNext)
         
