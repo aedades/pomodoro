@@ -19,6 +19,7 @@ describe('useSettings', () => {
     long_break_minutes: 15,
     long_break_interval: 4,
     move_completed_to_bottom: true,
+    spotify_enabled: false,
   };
 
   it('returns default settings when localStorage is empty', () => {
