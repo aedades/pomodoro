@@ -226,6 +226,16 @@ export default function Stats({ stats }: StatsProps) {
           value={formatDuration(stats.avgFocusMinutesPerDay)}
           subtext="per active day"
         />
+        <StatCard 
+          label="Avg Session" 
+          value={stats.avgPomodoroLengthLastWeek > 0 ? `${stats.avgPomodoroLengthLastWeek}m` : '—'}
+          subtext="last 7 days"
+        />
+        <StatCard 
+          label="Avg Session" 
+          value={stats.avgPomodoroLength > 0 ? `${stats.avgPomodoroLength}m` : '—'}
+          subtext="all time"
+        />
       </div>
       
       {/* By project */}

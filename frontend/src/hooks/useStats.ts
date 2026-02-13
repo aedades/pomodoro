@@ -39,6 +39,8 @@ export interface Stats {
   // Averages
   avgPomodorosPerDay: number
   avgFocusMinutesPerDay: number
+  avgPomodoroLength: number // Average minutes per pomodoro (all time)
+  avgPomodoroLengthLastWeek: number // Average minutes per pomodoro (last 7 days)
   
   // By time period
   today: DailyStats
@@ -208,6 +210,22 @@ export function useStats(
     const avgPomodorosPerDay = Math.round((totalPomodoros / activeDays) * 10) / 10
     const avgFocusMinutesPerDay = Math.round(totalMinutes / activeDays)
     
+    // Average pomodoro length (useful for flow mode users)
+    const avgPomodoroLength = totalPomodoros > 0 
+      ? Math.round(totalMinutes / totalPomodoros) 
+      : 0
+    
+    // Average pomodoro length last 7 days
+    const oneWeekAgo = new Date(now)
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+    const lastWeekPomodoros = pomodoros.filter(p => 
+      !p.interrupted && new Date(p.completedAt) >= oneWeekAgo
+    )
+    const lastWeekMinutes = lastWeekPomodoros.reduce((sum, p) => sum + p.durationMinutes, 0)
+    const avgPomodoroLengthLastWeek = lastWeekPomodoros.length > 0
+      ? Math.round(lastWeekMinutes / lastWeekPomodoros.length)
+      : 0
+    
     // Today's stats
     const todayData = byDate.get(todayStr) || { completed: 0, interrupted: 0, minutes: 0 }
     const today: DailyStats = {
@@ -326,6 +344,8 @@ export function useStats(
       longestStreak,
       avgPomodorosPerDay,
       avgFocusMinutesPerDay,
+      avgPomodoroLength,
+      avgPomodoroLengthLastWeek,
       today,
       thisWeek,
       thisMonth,
