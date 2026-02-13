@@ -98,13 +98,15 @@ export function useFirestoreData(userId: string | null) {
     }
     
     // Firestore doesn't accept undefined values, so only include defined fields
+    const now = new Date().toISOString()
     const newTask: GuestTask = {
       id: generateId(),
       title,
       completed: false,
       estimatedPomodoros,
       actualPomodoros: 0,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     }
     // Only add optional fields if they're defined
     if (projectId !== undefined) newTask.projectId = projectId
@@ -125,8 +127,9 @@ export function useFirestoreData(userId: string | null) {
     if (!userId || !db) return
 
     // Filter out undefined values - Firestore doesn't accept them
+    // Always set updatedAt on any update
     const cleanUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([_, v]) => v !== undefined)
+      Object.entries({ ...updates, updatedAt: new Date().toISOString() }).filter(([_, v]) => v !== undefined)
     )
 
     try {
@@ -149,12 +152,14 @@ export function useFirestoreData(userId: string | null) {
   const addProject = useCallback(async (name: string, color = '#6366f1') => {
     if (!userId || !db) return null
 
+    const now = new Date().toISOString()
     const newProject: GuestProject = {
       id: generateId(),
       name,
       color,
       completed: false,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     }
 
     try {
@@ -170,8 +175,9 @@ export function useFirestoreData(userId: string | null) {
     if (!userId || !db) return
 
     // Filter out undefined values - Firestore doesn't accept them
+    // Always set updatedAt on any update
     const cleanUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([_, v]) => v !== undefined)
+      Object.entries({ ...updates, updatedAt: new Date().toISOString() }).filter(([_, v]) => v !== undefined)
     )
 
     try {
@@ -258,8 +264,8 @@ export function useFirestoreData(userId: string | null) {
 
 /**
  * Merge localStorage data into Firestore on sign-in.
- * Only adds items that don't already exist in Firestore (by ID).
- * This preserves cloud data while adding any local-only items.
+ * - Adds items that don't exist in Firestore
+ * - For items that exist in both, keeps the one with later updatedAt timestamp
  */
 export async function mergeLocalToFirestore(
   localData: {
@@ -273,42 +279,74 @@ export async function mergeLocalToFirestore(
     pomodoros: GuestPomodoro[]
   },
   userId: string
-): Promise<{ added: { tasks: number; projects: number; pomodoros: number } }> {
+): Promise<{ added: { tasks: number; projects: number; pomodoros: number }; updated: { tasks: number; projects: number } }> {
   if (!db || !isFirebaseConfigured) {
     console.error('Firebase not configured')
-    return { added: { tasks: 0, projects: 0, pomodoros: 0 } }
+    return { added: { tasks: 0, projects: 0, pomodoros: 0 }, updated: { tasks: 0, projects: 0 } }
   }
 
   const firestore = db
   
-  // Find items that exist locally but not in Firestore
-  const existingTaskIds = new Set(existingData.tasks.map(t => t.id))
-  const existingProjectIds = new Set(existingData.projects.map(p => p.id))
+  // Build maps of existing items by ID
+  const existingTaskMap = new Map(existingData.tasks.map(t => [t.id, t]))
+  const existingProjectMap = new Map(existingData.projects.map(p => [p.id, p]))
   const existingPomodoroIds = new Set(existingData.pomodoros.map(p => p.id))
   
-  const newTasks = localData.tasks.filter(t => !existingTaskIds.has(t.id))
-  const newProjects = localData.projects.filter(p => !existingProjectIds.has(p.id))
+  // Separate into new items and items needing conflict resolution
+  const newTasks: GuestTask[] = []
+  const updatedTasks: GuestTask[] = []
+  for (const localTask of localData.tasks) {
+    const existing = existingTaskMap.get(localTask.id)
+    if (!existing) {
+      newTasks.push(localTask)
+    } else {
+      // Conflict: compare timestamps, keep newer
+      const localTime = new Date(localTask.updatedAt || localTask.createdAt).getTime()
+      const existingTime = new Date(existing.updatedAt || existing.createdAt).getTime()
+      if (localTime > existingTime) {
+        updatedTasks.push(localTask)
+      }
+    }
+  }
+  
+  const newProjects: GuestProject[] = []
+  const updatedProjects: GuestProject[] = []
+  for (const localProject of localData.projects) {
+    const existing = existingProjectMap.get(localProject.id)
+    if (!existing) {
+      newProjects.push(localProject)
+    } else {
+      // Conflict: compare timestamps, keep newer
+      const localTime = new Date(localProject.updatedAt || localProject.createdAt).getTime()
+      const existingTime = new Date(existing.updatedAt || existing.createdAt).getTime()
+      if (localTime > existingTime) {
+        updatedProjects.push(localProject)
+      }
+    }
+  }
+  
   const newPomodoros = localData.pomodoros.filter(p => !existingPomodoroIds.has(p.id)).slice(0, 500)
 
-  console.log('Merging local data to Firestore for user:', userId)
-  console.log('New tasks to add:', newTasks.length, '(existing:', existingData.tasks.length, ')')
-  console.log('New projects to add:', newProjects.length, '(existing:', existingData.projects.length, ')')
-  console.log('New pomodoros to add:', newPomodoros.length, '(existing:', existingData.pomodoros.length, ')')
+  console.log('[Merge] For user:', userId)
+  console.log('[Merge] New tasks:', newTasks.length, '| Updated tasks:', updatedTasks.length)
+  console.log('[Merge] New projects:', newProjects.length, '| Updated projects:', updatedProjects.length)
+  console.log('[Merge] New pomodoros:', newPomodoros.length)
 
-  if (newTasks.length === 0 && newProjects.length === 0 && newPomodoros.length === 0) {
-    console.log('Nothing new to merge')
-    return { added: { tasks: 0, projects: 0, pomodoros: 0 } }
+  const totalChanges = newTasks.length + updatedTasks.length + newProjects.length + updatedProjects.length + newPomodoros.length
+  if (totalChanges === 0) {
+    console.log('[Merge] Nothing to merge')
+    return { added: { tasks: 0, projects: 0, pomodoros: 0 }, updated: { tasks: 0, projects: 0 } }
   }
 
   try {
     const batch = writeBatch(firestore)
 
-    for (const task of newTasks) {
+    for (const task of [...newTasks, ...updatedTasks]) {
       const ref = doc(firestore, 'users', userId, 'tasks', task.id)
       batch.set(ref, task)
     }
 
-    for (const project of newProjects) {
+    for (const project of [...newProjects, ...updatedProjects]) {
       const ref = doc(firestore, 'users', userId, 'projects', project.id)
       batch.set(ref, project)
     }
@@ -319,11 +357,14 @@ export async function mergeLocalToFirestore(
     }
 
     await batch.commit()
-    console.log('Merge complete!')
-    return { added: { tasks: newTasks.length, projects: newProjects.length, pomodoros: newPomodoros.length } }
+    console.log('[Merge] Complete!')
+    return { 
+      added: { tasks: newTasks.length, projects: newProjects.length, pomodoros: newPomodoros.length },
+      updated: { tasks: updatedTasks.length, projects: updatedProjects.length }
+    }
   } catch (error) {
-    console.error('Merge failed:', error)
-    return { added: { tasks: 0, projects: 0, pomodoros: 0 } }
+    console.error('[Merge] Failed:', error)
+    return { added: { tasks: 0, projects: 0, pomodoros: 0 }, updated: { tasks: 0, projects: 0 } }
   }
 }
 
