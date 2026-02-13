@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2](https://github.com/aedades/pomopal/compare/v1.1.1...v1.1.2) (2026-02-13)
+
+
+### Bug Fixes
+
+* remove redundant help text from obvious settings ([#22](https://github.com/aedades/pomopal/issues/22)) ([315d9f7](https://github.com/aedades/pomopal/commit/315d9f7a97469bb029416000ce7485706d220938))
+* save Firestore data to localStorage on sign-out ([#20](https://github.com/aedades/pomopal/issues/20)) ([88b4893](https://github.com/aedades/pomopal/commit/88b48933a62ce07fdcaa41ce56cdf8ec21321043))
+
 ## [1.1.1](https://github.com/aedades/pomopal/compare/v1.1.0...v1.1.1) (2026-02-13)
 
 
