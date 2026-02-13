@@ -8,7 +8,6 @@ import TaskList from './components/TaskList'
 import Header from './components/Header'
 import DailyProgress from './components/DailyProgress'
 import Stats from './components/Stats'
-import SpotifyPlayer from './components/SpotifyPlayer'
 import { IOSInstructions, IOSInstallBanner } from './components/IOSInstructions'
 import { TaskProvider, useTaskContext } from './context/TaskContext'
 import { AuthProvider } from './context/AuthContext'
@@ -176,10 +175,6 @@ function AppContent() {
               />
 
               <TaskList />
-
-              {settings.spotify_enabled && (
-                <SpotifyPlayer mode="embed" />
-              )}
             </>
           ) : (
             <Stats stats={stats} />

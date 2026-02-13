@@ -154,23 +154,6 @@ export default function SettingsModal({ settings, onUpdate, onClose }: SettingsM
               </div>
             </div>
           </section>
-
-          {/* Integrations */}
-          <section>
-            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase mb-3">
-              Integrations
-            </h3>
-            <div className="space-y-3">
-              <Toggle
-                label="🎵 Show Spotify player"
-                checked={settings.spotify_enabled}
-                onChange={(v) => onUpdate({ spotify_enabled: v })}
-              />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Add a music player for focus playlists. Paste any Spotify playlist URL.
-              </p>
-            </div>
-          </section>
         </div>
 
         <button

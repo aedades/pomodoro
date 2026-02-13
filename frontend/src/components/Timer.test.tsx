@@ -15,7 +15,6 @@ describe('Timer', () => {
     daily_pomodoro_goal: 8,
     flow_mode_enabled: false,
     move_completed_to_bottom: true,
-    spotify_enabled: false,
   };
 
   const defaultProps = {

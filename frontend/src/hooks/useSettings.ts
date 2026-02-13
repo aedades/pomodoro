@@ -12,7 +12,6 @@ export interface Settings {
   long_break_interval: number
   flow_mode_enabled: boolean // Count up instead of down, no alerts
   move_completed_to_bottom: boolean // Auto-move completed tasks to bottom
-  spotify_enabled: boolean // Show Spotify player (opt-in)
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -27,7 +26,6 @@ const DEFAULT_SETTINGS: Settings = {
   long_break_interval: 4,
   flow_mode_enabled: false,
   move_completed_to_bottom: true,
-  spotify_enabled: false,
 }
 
 const STORAGE_KEY = 'pomodoro:settings'
