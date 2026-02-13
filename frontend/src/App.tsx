@@ -44,9 +44,9 @@ function AppContent() {
   }, [])
 
   const handleTimerComplete = useCallback(
-    (mode: 'work' | 'shortBreak' | 'longBreak', interrupted: boolean) => {
+    (mode: 'work' | 'shortBreak' | 'longBreak', interrupted: boolean, durationMinutes: number) => {
       if (mode === 'work') {
-        recordPomodoro(interrupted)
+        recordPomodoro(interrupted, durationMinutes)
       }
     },
     [recordPomodoro]

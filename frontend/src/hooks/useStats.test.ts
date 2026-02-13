@@ -169,6 +169,85 @@ describe('formatDuration', () => {
   })
 })
 
+describe('useStats - average pomodoro length', () => {
+  const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  const eightDaysAgo = new Date(Date.now() - 8 * 86400000).toISOString().split('T')[0]
+  
+  it('calculates average pomodoro length for all time', () => {
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 25, startedAt: today, completedAt: `${today}T10:00:00`, interrupted: false },
+      { id: '2', durationMinutes: 45, startedAt: today, completedAt: `${today}T11:00:00`, interrupted: false },
+      { id: '3', durationMinutes: 50, startedAt: today, completedAt: `${today}T12:00:00`, interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, [], []))
+    
+    // (25 + 45 + 50) / 3 = 40
+    expect(result.current.avgPomodoroLength).toBe(40)
+  })
+  
+  it('calculates average pomodoro length for last 7 days only', () => {
+    const pomodoros: GuestPomodoro[] = [
+      // Old pomodoro (more than 7 days ago) - should not be included in lastWeek
+      { id: '1', durationMinutes: 100, startedAt: eightDaysAgo, completedAt: `${eightDaysAgo}T10:00:00`, interrupted: false },
+      // Recent pomodoros
+      { id: '2', durationMinutes: 25, startedAt: today, completedAt: `${today}T10:00:00`, interrupted: false },
+      { id: '3', durationMinutes: 35, startedAt: yesterday, completedAt: `${yesterday}T10:00:00`, interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, [], []))
+    
+    // All time: (100 + 25 + 35) / 3 = 53.33 ≈ 53
+    expect(result.current.avgPomodoroLength).toBe(53)
+    // Last 7 days: (25 + 35) / 2 = 30
+    expect(result.current.avgPomodoroLengthLastWeek).toBe(30)
+  })
+  
+  it('excludes interrupted pomodoros from average calculations', () => {
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 30, startedAt: today, completedAt: `${today}T10:00:00`, interrupted: false },
+      { id: '2', durationMinutes: 50, startedAt: today, completedAt: `${today}T11:00:00`, interrupted: false },
+      { id: '3', durationMinutes: 5, startedAt: today, completedAt: `${today}T12:00:00`, interrupted: true }, // Should be excluded
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, [], []))
+    
+    // (30 + 50) / 2 = 40 (not 28.33 if interrupted was included)
+    expect(result.current.avgPomodoroLength).toBe(40)
+    expect(result.current.avgPomodoroLengthLastWeek).toBe(40)
+  })
+  
+  it('returns 0 when no completed pomodoros', () => {
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 5, startedAt: today, completedAt: `${today}T10:00:00`, interrupted: true },
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, [], []))
+    
+    expect(result.current.avgPomodoroLength).toBe(0)
+    expect(result.current.avgPomodoroLengthLastWeek).toBe(0)
+  })
+  
+  it('handles flow mode with variable durations correctly', () => {
+    // Simulating a flow mode user with longer sessions
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', durationMinutes: 60, startedAt: today, completedAt: `${today}T10:00:00`, interrupted: false },
+      { id: '2', durationMinutes: 90, startedAt: today, completedAt: `${today}T12:00:00`, interrupted: false },
+      { id: '3', durationMinutes: 45, startedAt: today, completedAt: `${today}T14:00:00`, interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, [], []))
+    
+    // (60 + 90 + 45) / 3 = 65
+    expect(result.current.avgPomodoroLength).toBe(65)
+    // Total minutes should be actual sum
+    expect(result.current.totalMinutes).toBe(195)
+    // Completion rate should reflect all completed
+    expect(result.current.totalPomodoros).toBe(3)
+  })
+})
+
 describe('useStats - pomodoros without taskId', () => {
   const today = new Date().toISOString().split('T')[0]
   
@@ -234,17 +313,6 @@ describe('useStats - excludeWeekendsFromStreak', () => {
     const d = new Date(baseMonday)
     d.setDate(d.getDate() + dayOffset)
     return d.toISOString().split('T')[0]
-  }
-  
-  // Find next Monday from today for predictable test dates
-  const getNextMonday = (): Date => {
-    const today = new Date()
-    const day = today.getDay()
-    const daysUntilMonday = day === 0 ? 1 : (8 - day) % 7 || 7
-    const monday = new Date(today)
-    monday.setDate(monday.getDate() + daysUntilMonday)
-    monday.setHours(12, 0, 0, 0)
-    return monday
   }
   
   // Use a fixed date for predictable tests (a Monday)

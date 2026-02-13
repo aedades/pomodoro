@@ -117,11 +117,11 @@ export function useGuestData() {
     setTasks(prev => prev.map(t => t.projectId === id ? { ...t, projectId: undefined } : t))
   }, [setProjects, setTasks])
 
-  const recordPomodoro = useCallback((taskId?: string, interrupted = false) => {
+  const recordPomodoro = useCallback((taskId?: string, interrupted = false, durationMinutes = 25) => {
     const newPomodoro: GuestPomodoro = {
       id: generateId(),
       taskId,
-      durationMinutes: 25,
+      durationMinutes,
       startedAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       interrupted,

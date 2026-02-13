@@ -197,13 +197,13 @@ export function useFirestoreData(userId: string | null) {
     }
   }, [userId])
 
-  const recordPomodoro = useCallback(async (taskId?: string, interrupted = false) => {
+  const recordPomodoro = useCallback(async (taskId?: string, interrupted = false, durationMinutes = 25) => {
     if (!userId || !db) return
 
     const newPomodoro: GuestPomodoro = {
       id: generateId(),
       taskId,
-      durationMinutes: 25,
+      durationMinutes,
       startedAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       interrupted,

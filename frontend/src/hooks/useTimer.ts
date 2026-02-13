@@ -14,7 +14,7 @@ interface TimerState {
 
 interface UseTimerOptions {
   settings: Settings
-  onComplete: (mode: TimerMode, interrupted: boolean) => void
+  onComplete: (mode: TimerMode, interrupted: boolean, durationMinutes: number) => void
   onStateChange?: (state: TimerState) => void  // Called when timer state changes
 }
 
@@ -97,7 +97,13 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
     
     setIsRunning(false)
     setEndTime(null)
-    onComplete(mode, false)
+    // For countdown mode, use the configured duration
+    const durationMinutes = mode === 'work' 
+      ? settings.work_duration_minutes 
+      : mode === 'shortBreak' 
+        ? settings.short_break_minutes 
+        : settings.long_break_minutes
+    onComplete(mode, false, durationMinutes)
     playSound()
 
     if (mode === 'work') {
@@ -148,10 +154,12 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
     setStartTime(null)
     
     const targetSeconds = settings.work_duration_minutes * 60
+    // Actual duration in minutes (flow mode tracks real elapsed time)
+    const actualDurationMinutes = Math.floor(elapsed / 60)
     
     // Only count as complete if elapsed >= target
     if (elapsed >= targetSeconds) {
-      onComplete('work', false)
+      onComplete('work', false, actualDurationMinutes)
       const newCount = sessionCount + 1
       setSessionCount(newCount)
       
@@ -163,7 +171,7 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
       setElapsed(0)
     } else {
       // Didn't hit target - treat as interrupted
-      onComplete('work', true)
+      onComplete('work', true, actualDurationMinutes)
       setTimeLeft(targetSeconds)
       setElapsed(0)
     }
@@ -230,10 +238,19 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
 
   const interrupt = useCallback(() => {
     if (mode === 'work' && isRunning) {
-      onComplete(mode, true)
+      // Calculate elapsed duration based on mode
+      let elapsedMinutes: number
+      if (isFlowMode) {
+        elapsedMinutes = Math.floor(elapsed / 60)
+      } else {
+        // Countdown mode: calculate from initial duration minus remaining
+        const initialSeconds = settings.work_duration_minutes * 60
+        elapsedMinutes = Math.floor((initialSeconds - timeLeft) / 60)
+      }
+      onComplete(mode, true, elapsedMinutes)
     }
     resetTimer(mode)
-  }, [mode, isRunning, onComplete, resetTimer])
+  }, [mode, isRunning, isFlowMode, elapsed, timeLeft, settings, onComplete, resetTimer])
 
   // Timer tick
   useEffect(() => {
