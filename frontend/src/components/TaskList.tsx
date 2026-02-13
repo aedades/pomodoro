@@ -2,6 +2,39 @@ import { useState } from 'react'
 import { useTaskContext } from '../context/TaskContext'
 import { useSettings } from '../hooks/useSettings'
 
+// Format due date for display
+function formatDueDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
+  if (dateOnly.getTime() === today.getTime()) {
+    // Today - show time if available
+    return date.getHours() !== 0 || date.getMinutes() !== 0
+      ? `Today ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+      : 'Today'
+  }
+  if (dateOnly.getTime() === tomorrow.getTime()) {
+    return date.getHours() !== 0 || date.getMinutes() !== 0
+      ? `Tomorrow ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+      : 'Tomorrow'
+  }
+  
+  // Within this week - show day name
+  const daysUntil = Math.floor((dateOnly.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+  if (daysUntil > 0 && daysUntil < 7) {
+    const dayName = date.toLocaleDateString([], { weekday: 'short' })
+    return date.getHours() !== 0 || date.getMinutes() !== 0
+      ? `${dayName} ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+      : dayName
+  }
+  
+  // Otherwise show date
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
 interface Task {
   id: string
   title: string
@@ -10,6 +43,7 @@ interface Task {
   completed: boolean
   estimated_pomodoros: number
   actual_pomodoros: number
+  due_date?: string
 }
 
 export default function TaskList() {
@@ -67,9 +101,17 @@ export default function TaskList() {
   const incompleteTasks = tasks.filter((t) => !t.completed)
   const completedTasks = tasks.filter((t) => t.completed)
   
+  // Sort incomplete tasks by due date (soonest first), tasks without due date at the end
+  const sortedIncompleteTasks = [...incompleteTasks].sort((a, b) => {
+    if (!a.due_date && !b.due_date) return 0
+    if (!a.due_date) return 1  // Tasks without due date go to bottom
+    if (!b.due_date) return -1
+    return new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+  })
+  
   const sortedTasks = settings.move_completed_to_bottom
-    ? [...incompleteTasks, ...completedTasks]
-    : incompleteTasks
+    ? [...sortedIncompleteTasks, ...completedTasks]
+    : sortedIncompleteTasks
 
   // Filter tasks: '' = all, 'none' = no project, otherwise by project ID
   const filteredTasks = sortedTasks.filter(t => {
@@ -262,11 +304,20 @@ function TaskItem({
         >
           {task.title || '(untitled)'}
         </span>
-        {task.project_name && (
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {task.project_name}
-          </span>
-        )}
+        <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+          {task.project_name && (
+            <span>{task.project_name}</span>
+          )}
+          {task.due_date && (
+            <span className={`flex items-center gap-0.5 ${
+              !task.completed && new Date(task.due_date) < new Date() 
+                ? 'text-red-500' 
+                : ''
+            }`}>
+              📅 {formatDueDate(task.due_date)}
+            </span>
+          )}
+        </div>
       </div>
 
       <span className={`text-sm flex-shrink-0 ${
@@ -419,12 +470,19 @@ function EditTaskModal({
   const [title, setTitle] = useState(task.title)
   const [projectId, setProjectId] = useState(task.project_id || '')
   const [estimate, setEstimate] = useState(task.estimated_pomodoros)
+  // Format existing due date for datetime-local input (YYYY-MM-DDTHH:MM)
+  const [dueDate, setDueDate] = useState(() => {
+    if (!task.due_date) return ''
+    const d = new Date(task.due_date)
+    return d.toISOString().slice(0, 16)
+  })
 
   const handleSave = () => {
     onSave({
       title: title.trim() || task.title,
       project_id: projectId || undefined,
       estimated_pomodoros: estimate,
+      due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
     })
   }
 
@@ -465,6 +523,30 @@ function EditTaskModal({
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Due Date (optional)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+              {dueDate && (
+                <button
+                  type="button"
+                  onClick={() => setDueDate('')}
+                  className="px-3 py-2 text-gray-500 hover:text-red-500 border border-gray-200 dark:border-gray-600 rounded-lg"
+                  title="Clear due date"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           <div>

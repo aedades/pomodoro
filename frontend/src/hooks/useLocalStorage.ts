@@ -61,7 +61,7 @@ export function useGuestData() {
     }
   }, [todayCount.date, setTodayCount])
 
-  const addTask = useCallback((title: string, projectId?: string, estimatedPomodoros = 1) => {
+  const addTask = useCallback((title: string, projectId?: string, estimatedPomodoros = 1, dueDate?: string) => {
     const newTask: GuestTask = {
       id: generateId(),
       title,
@@ -70,6 +70,7 @@ export function useGuestData() {
       estimatedPomodoros,
       actualPomodoros: 0,
       createdAt: new Date().toISOString(),
+      dueDate,
     }
     setTasks(prev => [newTask, ...prev])
     return newTask
@@ -169,6 +170,7 @@ export interface GuestTask {
   estimatedPomodoros: number
   actualPomodoros: number
   createdAt: string
+  dueDate?: string // ISO date string (optional)
 }
 
 export interface GuestProject {

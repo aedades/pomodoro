@@ -11,6 +11,7 @@ interface Task {
   completed: boolean
   estimated_pomodoros: number
   actual_pomodoros: number
+  due_date?: string
 }
 
 interface Project {
@@ -31,7 +32,7 @@ interface TaskContextType {
   isLoading: boolean
   isCloudSync: boolean
   
-  addTask: (title: string, projectId?: string, estimate?: number) => void
+  addTask: (title: string, projectId?: string, estimate?: number, dueDate?: string) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
   setActiveTask: (task: Task | null) => void
@@ -92,6 +93,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     completed: t.completed,
     estimated_pomodoros: t.estimatedPomodoros,
     actual_pomodoros: t.actualPomodoros,
+    due_date: t.dueDate,
   }))
 
   const projects: Project[] = dataSource.projects.map((p: GuestProject) => ({
@@ -101,8 +103,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     completed: p.completed,
   }))
 
-  const addTask = useCallback((title: string, projectId?: string, estimate = 1) => {
-    dataSource.addTask(title, projectId, estimate)
+  const addTask = useCallback((title: string, projectId?: string, estimate = 1, dueDate?: string) => {
+    dataSource.addTask(title, projectId, estimate, dueDate)
   }, [dataSource])
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
@@ -113,6 +115,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     if ('project_id' in updates) guestUpdates.projectId = updates.project_id
     if ('completed' in updates) guestUpdates.completed = updates.completed
     if ('estimated_pomodoros' in updates) guestUpdates.estimatedPomodoros = updates.estimated_pomodoros
+    if ('due_date' in updates) guestUpdates.dueDate = updates.due_date
     
     dataSource.updateTask(id, guestUpdates)
   }, [dataSource])
