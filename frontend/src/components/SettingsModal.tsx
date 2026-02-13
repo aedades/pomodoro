@@ -52,6 +52,7 @@ export default function SettingsModal({ settings, onUpdate, onClose }: SettingsM
           <section>
             <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase mb-3">
               Timer
+              <HelpTip text="Standard Pomodoro: 25 min work, 5 min short break, 15-30 min long break. Adjust to fit your focus style." />
             </h3>
             <div className="grid grid-cols-3 gap-3">
               <div>
@@ -143,6 +144,7 @@ export default function SettingsModal({ settings, onUpdate, onClose }: SettingsM
                 label="Dark mode"
                 checked={settings.dark_mode}
                 onChange={(v) => onUpdate({ dark_mode: v })}
+                help="Switch to a darker color scheme that's easier on the eyes."
               />
               <Toggle
                 label="Move completed tasks to bottom"
@@ -169,6 +171,7 @@ export default function SettingsModal({ settings, onUpdate, onClose }: SettingsM
                 label="Enable flow mode"
                 checked={settings.flow_mode_enabled}
                 onChange={(v) => onUpdate({ flow_mode_enabled: v })}
+                help="For deep work sessions. Timer counts up instead of down, with no interruptions."
               />
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Timer counts up from 0. No alerts — work uninterrupted. 

@@ -69,8 +69,15 @@ describe('SettingsModal', () => {
       />
     );
 
-    const flowModeToggle = screen.getByText(/enable flow mode/i).closest('div')?.querySelector('button');
-    fireEvent.click(flowModeToggle!);
+    // Find the flow mode toggle by getting all toggle buttons (w-12 h-6 rounded-full)
+    const allButtons = Array.from(document.querySelectorAll('button'));
+    const toggleButtons = allButtons.filter(btn => 
+      btn.className.includes('w-12') && btn.className.includes('h-6')
+    );
+    // Flow mode is after the behavior toggles (auto-start, sound, notifications, dark, completed, dated)
+    // It's the 7th toggle (index 6)
+    const flowModeToggle = toggleButtons[6];
+    fireEvent.click(flowModeToggle);
     expect(mockOnUpdate).toHaveBeenCalledWith({ flow_mode_enabled: true });
   });
 

@@ -324,4 +324,48 @@ describe('TaskContext', () => {
     // Task title should still be preserved
     expect(screen.getByText('Project Task')).toBeInTheDocument();
   });
+
+  it('can add task with due date', () => {
+    // Test component with due date support
+    function DueDateTestComponent() {
+      const { tasks, addTask, updateTask } = useTaskContext();
+      const tomorrow = new Date(Date.now() + 86400000).toISOString();
+
+      return (
+        <div>
+          <div data-testid="task-count">{tasks.length}</div>
+          <button onClick={() => addTask('Dated Task', undefined, 1, tomorrow)}>
+            Add Dated Task
+          </button>
+          {tasks.map((task) => (
+            <div key={task.id} data-testid={`task-${task.id}`}>
+              <span>{task.title}</span>
+              <span data-testid={`due-${task.id}`}>{task.due_date || 'no-date'}</span>
+              <button onClick={() => updateTask(task.id, { due_date: undefined })}>
+                Clear Date
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    render(
+      <TestWrapper>
+        <DueDateTestComponent />
+      </TestWrapper>
+    );
+
+    // Add a task with due date
+    fireEvent.click(screen.getByText('Add Dated Task'));
+    expect(screen.getByTestId('task-count').textContent).toBe('1');
+    
+    // Task should have a due date
+    const dueSpan = document.querySelector('[data-testid^="due-"]');
+    expect(dueSpan?.textContent).not.toBe('no-date');
+
+    // Clear the due date
+    fireEvent.click(screen.getByText('Clear Date'));
+    expect(dueSpan?.textContent).toBe('no-date');
+  });
 });

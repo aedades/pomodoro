@@ -103,6 +103,52 @@ describe('useStats', () => {
     
     expect(result.current.thisWeek).toHaveLength(7)
   })
+
+  it('calculates productivity insights by day of week', () => {
+    // Create pomodoros on different days
+    const monday = new Date('2024-01-15T10:00:00') // Monday
+    const tuesday = new Date('2024-01-16T14:00:00') // Tuesday
+    
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', taskId: 't1', durationMinutes: 25, startedAt: monday.toISOString(), completedAt: monday.toISOString(), interrupted: false },
+      { id: '2', taskId: 't1', durationMinutes: 25, startedAt: monday.toISOString(), completedAt: monday.toISOString(), interrupted: false },
+      { id: '3', taskId: 't1', durationMinutes: 25, startedAt: tuesday.toISOString(), completedAt: tuesday.toISOString(), interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, mockTasks, mockProjects))
+    
+    expect(result.current.insights.mostProductiveDay).toBe('Monday')
+    expect(result.current.insights.peakDayCount).toBe(2)
+    expect(result.current.insights.byDayOfWeek[1]).toBe(2) // Monday
+    expect(result.current.insights.byDayOfWeek[2]).toBe(1) // Tuesday
+  })
+
+  it('calculates productivity insights by hour', () => {
+    // Create pomodoros at different hours
+    const morning = new Date('2024-01-15T09:30:00')
+    const afternoon = new Date('2024-01-15T14:30:00')
+    
+    const pomodoros: GuestPomodoro[] = [
+      { id: '1', taskId: 't1', durationMinutes: 25, startedAt: morning.toISOString(), completedAt: morning.toISOString(), interrupted: false },
+      { id: '2', taskId: 't1', durationMinutes: 25, startedAt: morning.toISOString(), completedAt: morning.toISOString(), interrupted: false },
+      { id: '3', taskId: 't1', durationMinutes: 25, startedAt: morning.toISOString(), completedAt: morning.toISOString(), interrupted: false },
+      { id: '4', taskId: 't1', durationMinutes: 25, startedAt: afternoon.toISOString(), completedAt: afternoon.toISOString(), interrupted: false },
+    ]
+    
+    const { result } = renderHook(() => useStats(pomodoros, mockTasks, mockProjects))
+    
+    expect(result.current.insights.mostProductiveHour).toBe('9 AM')
+    expect(result.current.insights.peakHourCount).toBe(3)
+    expect(result.current.insights.byHourOfDay[9]).toBe(3)
+    expect(result.current.insights.byHourOfDay[14]).toBe(1)
+  })
+
+  it('returns null insights when no data', () => {
+    const { result } = renderHook(() => useStats([], [], []))
+    
+    expect(result.current.insights.mostProductiveDay).toBeNull()
+    expect(result.current.insights.mostProductiveHour).toBeNull()
+  })
 })
 
 describe('formatDuration', () => {
