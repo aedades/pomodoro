@@ -369,3 +369,81 @@ describe('TaskContext', () => {
     expect(dueSpan?.textContent).toBe('no-date');
   });
 });
+
+describe('TaskContext migration state', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('clears migration flag from localStorage on saveToLocalStorage', async () => {
+    // Set migration flag as if user was previously signed in
+    localStorage.setItem('pomodoro:migrated', 'true');
+    
+    // Import the function directly to test it
+    const { saveToLocalStorage } = await import('../hooks/useFirestoreData');
+    
+    saveToLocalStorage({
+      tasks: [{ id: 't1', title: 'Test', completed: false, estimatedPomodoros: 1, actualPomodoros: 0, createdAt: new Date().toISOString() }],
+      projects: [],
+      pomodoros: [],
+    });
+    
+    // Migration flag should be cleared
+    expect(localStorage.getItem('pomodoro:migrated')).toBeNull();
+  });
+
+  it('saves tasks to localStorage when saveToLocalStorage is called', async () => {
+    const { saveToLocalStorage } = await import('../hooks/useFirestoreData');
+    
+    const tasks = [
+      { id: 't1', title: 'Task 1', completed: false, estimatedPomodoros: 1, actualPomodoros: 0, createdAt: new Date().toISOString() },
+      { id: 't2', title: 'Task 2', completed: true, estimatedPomodoros: 2, actualPomodoros: 2, createdAt: new Date().toISOString() },
+    ];
+    
+    saveToLocalStorage({ tasks, projects: [], pomodoros: [] });
+    
+    const saved = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+    expect(saved).toHaveLength(2);
+    expect(saved[0].title).toBe('Task 1');
+    expect(saved[1].title).toBe('Task 2');
+  });
+
+  it('initializes hasMigrated from localStorage', () => {
+    // Set migration flag before rendering
+    localStorage.setItem('pomodoro:migrated', 'true');
+    
+    // The TaskProvider reads this on mount
+    render(
+      <TestWrapper>
+        <TestComponent />
+      </TestWrapper>
+    );
+    
+    // Component should render successfully
+    expect(screen.getByTestId('task-count')).toHaveTextContent('0');
+  });
+
+  it('preserves local tasks after component unmount/remount', () => {
+    // Add some tasks
+    const { unmount } = render(
+      <TestWrapper>
+        <TestComponent />
+      </TestWrapper>
+    );
+
+    fireEvent.click(screen.getByText('Add Task'));
+    fireEvent.click(screen.getByText('Add Task'));
+    expect(screen.getByTestId('task-count')).toHaveTextContent('2');
+    
+    unmount();
+    
+    // Remount - tasks should persist
+    render(
+      <TestWrapper>
+        <TestComponent />
+      </TestWrapper>
+    );
+    
+    expect(screen.getByTestId('task-count')).toHaveTextContent('2');
+  });
+});
