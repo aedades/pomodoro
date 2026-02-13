@@ -242,7 +242,7 @@ describe('useTimer', () => {
         result.current.toggle(); // Stop
       });
 
-      expect(onComplete).toHaveBeenCalledWith('work', false, 1); // 61 seconds = 1 minute
+      expect(onComplete).toHaveBeenCalledWith('work', false, 1, expect.any(Date)); // 61 seconds = 1 minute
       expect(result.current.sessionCount).toBe(1);
     });
 
@@ -269,7 +269,7 @@ describe('useTimer', () => {
         result.current.toggle(); // Stop early
       });
 
-      expect(onComplete).toHaveBeenCalledWith('work', true, 0); // 30 seconds = 0 minutes
+      expect(onComplete).toHaveBeenCalledWith('work', true, 0, expect.any(Date)); // 30 seconds = 0 minutes
       expect(result.current.sessionCount).toBe(0);
     });
 
