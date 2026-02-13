@@ -101,12 +101,27 @@ export default function TaskList() {
   const incompleteTasks = tasks.filter((t) => !t.completed)
   const completedTasks = tasks.filter((t) => t.completed)
   
-  // Sort incomplete tasks by due date (soonest first), tasks without due date at the end
+  // Sort incomplete tasks by due date
   const sortedIncompleteTasks = [...incompleteTasks].sort((a, b) => {
-    if (!a.due_date && !b.due_date) return 0
-    if (!a.due_date) return 1  // Tasks without due date go to bottom
-    if (!b.due_date) return -1
-    return new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+    const aHasDue = !!a.due_date
+    const bHasDue = !!b.due_date
+    
+    // If both have due dates, sort by date (soonest first)
+    if (aHasDue && bHasDue) {
+      return new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime()
+    }
+    
+    // If only one has a due date, use the setting to determine order
+    if (aHasDue !== bHasDue) {
+      if (settings.dated_tasks_first) {
+        return aHasDue ? -1 : 1  // Dated tasks first
+      } else {
+        return aHasDue ? 1 : -1  // Undated tasks first
+      }
+    }
+    
+    // Both undated - keep original order
+    return 0
   })
   
   const sortedTasks = settings.move_completed_to_bottom

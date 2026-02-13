@@ -150,6 +150,12 @@ export default function SettingsModal({ settings, onUpdate, onClose }: SettingsM
                 onChange={(v) => onUpdate({ move_completed_to_bottom: v })}
                 help="Automatically sort completed tasks to the bottom of the list."
               />
+              <Toggle
+                label="Show dated tasks first"
+                checked={settings.dated_tasks_first}
+                onChange={(v) => onUpdate({ dated_tasks_first: v })}
+                help="Tasks with due dates appear before tasks without due dates."
+              />
             </div>
           </section>
 

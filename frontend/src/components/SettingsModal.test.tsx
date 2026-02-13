@@ -15,6 +15,7 @@ describe('SettingsModal', () => {
     daily_pomodoro_goal: 8,
     flow_mode_enabled: false,
     move_completed_to_bottom: true,
+    dated_tasks_first: true,
   };
 
   const mockOnUpdate = vi.fn();

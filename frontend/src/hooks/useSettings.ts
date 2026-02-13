@@ -12,6 +12,7 @@ export interface Settings {
   long_break_interval: number
   flow_mode_enabled: boolean // Count up instead of down, no alerts
   move_completed_to_bottom: boolean // Auto-move completed tasks to bottom
+  dated_tasks_first: boolean // Show tasks with due dates before undated tasks
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS: Settings = {
   long_break_interval: 4,
   flow_mode_enabled: false,
   move_completed_to_bottom: true,
+  dated_tasks_first: true,
 }
 
 const STORAGE_KEY = 'pomodoro:settings'
