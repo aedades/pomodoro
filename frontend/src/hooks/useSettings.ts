@@ -16,6 +16,7 @@ export interface Settings {
   flow_mode_enabled: boolean // Count up instead of down, no alerts
   move_completed_to_bottom: boolean // Auto-move completed tasks to bottom
   dated_tasks_first: boolean // Show tasks with due dates before undated tasks
+  exclude_weekends_from_streak: boolean // Don't break streak for missing Sat/Sun
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: Settings = {
   flow_mode_enabled: false,
   move_completed_to_bottom: true,
   dated_tasks_first: true,
+  exclude_weekends_from_streak: false,
 }
 
 const STORAGE_KEY = 'pomodoro:settings'

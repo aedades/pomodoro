@@ -29,7 +29,9 @@ function AppContent() {
   const appliedRemoteRef = useRef(false)
   const lastSyncedStateRef = useRef<string>('')
   const [view, setView] = useState<View>('timer')
-  const stats = useStats(pomodoros, rawTasks, rawProjects)
+  const stats = useStats(pomodoros, rawTasks, rawProjects, {
+    excludeWeekendsFromStreak: settings.exclude_weekends_from_streak,
+  })
   
   // Show iOS instructions on first visit for iOS users
   useEffect(() => {
