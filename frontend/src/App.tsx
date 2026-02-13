@@ -201,7 +201,7 @@ function AppContent() {
           <p className="text-white/50 dark:text-gray-500 mt-3">
             Working with a remote team? Try{' '}
             <a
-              href="https://timezone-buddy.com"
+              href="https://aedades.github.io/timezone-buddy/"
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-white dark:hover:text-gray-300 transition-colors"
