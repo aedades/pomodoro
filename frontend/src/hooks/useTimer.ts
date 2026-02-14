@@ -14,7 +14,7 @@ interface TimerState {
 
 interface UseTimerOptions {
   settings: Settings
-  onComplete: (mode: TimerMode, interrupted: boolean) => void
+  onComplete: (mode: TimerMode, interrupted: boolean, durationMinutes: number, startedAt: Date) => void
   onStateChange?: (state: TimerState) => void  // Called when timer state changes
 }
 
@@ -34,6 +34,8 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
   const [timeLeft, setTimeLeft] = useState(settings.work_duration_minutes * 60)
   // For flow mode: elapsed time
   const [elapsed, setElapsed] = useState(0)
+  // Track when current pomodoro started (for accurate timestamps)
+  const [pomodoroStartedAt, setPomodoroStartedAt] = useState<Date | null>(null)
   
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioUnlockedRef = useRef(false)
@@ -97,7 +99,16 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
     
     setIsRunning(false)
     setEndTime(null)
-    onComplete(mode, false)
+    // For countdown mode, use the configured duration
+    const durationMinutes = mode === 'work' 
+      ? settings.work_duration_minutes 
+      : mode === 'shortBreak' 
+        ? settings.short_break_minutes 
+        : settings.long_break_minutes
+    // Pass actual start time (or fallback to calculated time if somehow missing)
+    const startTime = pomodoroStartedAt || new Date(Date.now() - durationMinutes * 60 * 1000)
+    onComplete(mode, false, durationMinutes, startTime)
+    setPomodoroStartedAt(null) // Clear for next session
     playSound()
 
     if (mode === 'work') {
@@ -134,11 +145,13 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
         } else {
           setEndTime(Date.now() + workDuration * 1000)
         }
+        // New work session starting via auto-start
+        setPomodoroStartedAt(new Date())
         setIsRunning(true)
         completedRef.current = false
       }
     }
-  }, [mode, sessionCount, settings, onComplete, playSound, showNotification, getDuration])
+  }, [mode, sessionCount, settings, onComplete, playSound, showNotification, getDuration, pomodoroStartedAt])
 
   // Stop flow mode session (user manually stops)
   const stopFlowSession = useCallback(() => {
@@ -148,10 +161,15 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
     setStartTime(null)
     
     const targetSeconds = settings.work_duration_minutes * 60
+    // Actual duration in minutes (flow mode tracks real elapsed time)
+    const actualDurationMinutes = Math.floor(elapsed / 60)
+    // Pass actual start time (or fallback if somehow missing)
+    const startTime = pomodoroStartedAt || new Date(Date.now() - elapsed * 1000)
     
     // Only count as complete if elapsed >= target
     if (elapsed >= targetSeconds) {
-      onComplete('work', false)
+      onComplete('work', false, actualDurationMinutes, startTime)
+      setPomodoroStartedAt(null)
       const newCount = sessionCount + 1
       setSessionCount(newCount)
       
@@ -163,11 +181,12 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
       setElapsed(0)
     } else {
       // Didn't hit target - treat as interrupted
-      onComplete('work', true)
+      onComplete('work', true, actualDurationMinutes, startTime)
+      setPomodoroStartedAt(null)
       setTimeLeft(targetSeconds)
       setElapsed(0)
     }
-  }, [isFlowMode, isRunning, elapsed, settings, sessionCount, onComplete, getDuration])
+  }, [isFlowMode, isRunning, elapsed, settings, sessionCount, onComplete, getDuration, pomodoroStartedAt])
 
   const resetTimer = useCallback(
     (newMode: TimerMode, autoStart = false) => {
@@ -224,16 +243,35 @@ export function useTimer({ settings, onComplete, onStateChange }: UseTimerOption
         setEndTime(Date.now() + timeLeft * 1000)
         setStartTime(null)
       }
+      // Track when this pomodoro started (for accurate timestamps)
+      if (mode === 'work') {
+        setPomodoroStartedAt(new Date())
+      }
       setIsRunning(true)
     }
-  }, [unlockAudio, isRunning, isFlowMode, endTime, timeLeft, stopFlowSession])
+  }, [unlockAudio, isRunning, isFlowMode, endTime, timeLeft, stopFlowSession, mode])
 
   const interrupt = useCallback(() => {
     if (mode === 'work' && isRunning) {
-      onComplete(mode, true)
+      // Calculate elapsed duration based on mode
+      let elapsedMinutes: number
+      let elapsedSeconds: number
+      if (isFlowMode) {
+        elapsedMinutes = Math.floor(elapsed / 60)
+        elapsedSeconds = elapsed
+      } else {
+        // Countdown mode: calculate from initial duration minus remaining
+        const initialSeconds = settings.work_duration_minutes * 60
+        elapsedSeconds = initialSeconds - timeLeft
+        elapsedMinutes = Math.floor(elapsedSeconds / 60)
+      }
+      // Pass actual start time (or fallback if somehow missing)
+      const startTime = pomodoroStartedAt || new Date(Date.now() - elapsedSeconds * 1000)
+      onComplete(mode, true, elapsedMinutes, startTime)
+      setPomodoroStartedAt(null)
     }
     resetTimer(mode)
-  }, [mode, isRunning, onComplete, resetTimer])
+  }, [mode, isRunning, isFlowMode, elapsed, timeLeft, settings, onComplete, resetTimer, pomodoroStartedAt])
 
   // Timer tick
   useEffect(() => {

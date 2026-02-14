@@ -46,7 +46,7 @@ interface TaskContextType {
   deleteProject: (id: string) => void
   deleteProjectWithTasks: (id: string) => void
   
-  recordPomodoro: (interrupted: boolean) => void
+  recordPomodoro: (interrupted: boolean, durationMinutes: number, startedAt: Date) => void
 }
 
 const TaskContext = createContext<TaskContextType | null>(null)
@@ -144,8 +144,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     dataSource.deleteProject(id)
   }, [dataSource, activeTask])
 
-  const recordPomodoro = useCallback((interrupted: boolean) => {
-    dataSource.recordPomodoro(activeTask?.id, interrupted)
+  const recordPomodoro = useCallback((interrupted: boolean, durationMinutes: number, startedAt: Date) => {
+    dataSource.recordPomodoro(activeTask?.id, interrupted, durationMinutes, startedAt)
   }, [dataSource, activeTask])
 
   // Clear active task if it gets completed

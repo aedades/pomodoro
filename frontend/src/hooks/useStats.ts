@@ -39,6 +39,8 @@ export interface Stats {
   // Averages
   avgPomodorosPerDay: number
   avgFocusMinutesPerDay: number
+  avgPomodoroLength: number // Average minutes per pomodoro (all time)
+  avgPomodoroLengthLastWeek: number // Average minutes per pomodoro (last 7 days)
   
   // By time period
   today: DailyStats
@@ -83,15 +85,17 @@ export function useStats(
     const todayStr = getDateString(now)
     
     // Helper to check if a date is a weekend
+    // Note: We parse as 'YYYY-MM-DDT12:00:00' to avoid timezone issues
+    // (date-only strings are parsed as UTC midnight, which can shift the day)
     const isWeekend = (dateStr: string): boolean => {
-      const d = new Date(dateStr)
+      const d = new Date(`${dateStr}T12:00:00`)
       const day = d.getDay()
       return day === 0 || day === 6 // Sunday = 0, Saturday = 6
     }
     
     // Get previous working day (skips weekends if excluding)
     const getPrevDay = (dateStr: string): string => {
-      const d = new Date(dateStr)
+      const d = new Date(`${dateStr}T12:00:00`)
       d.setDate(d.getDate() - 1)
       let result = getDateString(d)
       
@@ -181,7 +185,7 @@ export function useStats(
         tempStreak = 1
       } else {
         // Check if dates are consecutive (accounting for weekend skipping)
-        const expectedNext = new Date(prevDate)
+        const expectedNext = new Date(`${prevDate}T12:00:00`)
         expectedNext.setDate(expectedNext.getDate() + 1)
         let expectedDateStr = getDateString(expectedNext)
         
@@ -207,6 +211,22 @@ export function useStats(
     const activeDays = sortedDates.length || 1
     const avgPomodorosPerDay = Math.round((totalPomodoros / activeDays) * 10) / 10
     const avgFocusMinutesPerDay = Math.round(totalMinutes / activeDays)
+    
+    // Average pomodoro length (useful for flow mode users)
+    const avgPomodoroLength = totalPomodoros > 0 
+      ? Math.round(totalMinutes / totalPomodoros) 
+      : 0
+    
+    // Average pomodoro length last 7 days
+    const oneWeekAgo = new Date(now)
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+    const lastWeekPomodoros = pomodoros.filter(p => 
+      !p.interrupted && new Date(p.completedAt) >= oneWeekAgo
+    )
+    const lastWeekMinutes = lastWeekPomodoros.reduce((sum, p) => sum + p.durationMinutes, 0)
+    const avgPomodoroLengthLastWeek = lastWeekPomodoros.length > 0
+      ? Math.round(lastWeekMinutes / lastWeekPomodoros.length)
+      : 0
     
     // Today's stats
     const todayData = byDate.get(todayStr) || { completed: 0, interrupted: 0, minutes: 0 }
@@ -247,24 +267,31 @@ export function useStats(
       })
     }
     
-    // By project
-    const projectMap = new Map<string, number>()
+    // By project - track both count and actual minutes
+    const projectMap = new Map<string, { count: number; minutes: number }>()
     for (const p of pomodoros) {
-      if (p.interrupted || !p.taskId) continue
-      const task = tasks.find(t => t.id === p.taskId)
-      const projectId = task?.projectId || 'none'
-      projectMap.set(projectId, (projectMap.get(projectId) || 0) + 1)
+      if (p.interrupted) continue
+      // Handle pomodoros without taskId - group as 'none'
+      let projectId = 'none'
+      if (p.taskId) {
+        const task = tasks.find(t => t.id === p.taskId)
+        projectId = task?.projectId || 'none'
+      }
+      const existing = projectMap.get(projectId) || { count: 0, minutes: 0 }
+      existing.count++
+      existing.minutes += p.durationMinutes
+      projectMap.set(projectId, existing)
     }
     
     const byProject: ProjectStats[] = Array.from(projectMap.entries())
-      .map(([projectId, count]) => {
+      .map(([projectId, { count, minutes }]) => {
         const project = projects.find(p => p.id === projectId)
         return {
           projectId,
           projectName: project?.name || 'No Project',
           color: project?.color || '#9ca3af',
           pomodoros: count,
-          minutes: count * 25, // Assume standard duration
+          minutes,
         }
       })
       .sort((a, b) => b.pomodoros - a.pomodoros)
@@ -326,6 +353,8 @@ export function useStats(
       longestStreak,
       avgPomodorosPerDay,
       avgFocusMinutesPerDay,
+      avgPomodoroLength,
+      avgPomodoroLengthLastWeek,
       today,
       thisWeek,
       thisMonth,
